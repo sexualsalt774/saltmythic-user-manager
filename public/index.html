@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Manager</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f7fc;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #4A90E2;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .user-list,
+        .user-details {
+            margin-top: 30px;
+        }
+
+        .user-list table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .user-list th,
+        .user-list td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+            font-size: 1rem;
+        }
+
+        .user-list th {
+            background-color: #f8f8f8;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .user-list tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .user-list td button {
+            background-color: #4A90E2;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .user-list td button:hover {
+            background-color: #357ABD;
+        }
+
+        .user-details {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-details h2 {
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .user-details div {
+            margin-bottom: 15px;
+        }
+
+        .user-details label {
+            font-size: 1rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+            color: #555;
+        }
+
+        .user-details span {
+            font-size: 1rem;
+            color: #777;
+        }
+
+        .user-details input,
+        .user-details select {
+            width: 100%;
+            padding: 10px;
+            font-size: 1rem;
+            margin-top: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+
+        .user-details select {
+            height: auto;
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .user-details button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .user-details button:hover {
+            background-color: #218838;
+        }
+
+        /* Small device responsiveness */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .user-details button,
+            .user-list td button {
+                padding: 8px 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>User Manager</h1>
+
+        <!-- User List -->
+        <div class="user-list">
+            <h2>All Users</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Identifier</th>
+                        <th>Verified</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="user-list">
+                    <!-- User rows will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- User Details for Editing -->
+        <div class="user-details" style="display: none;">
+            <h2>Edit User Groups</h2>
+            <div>
+                <label for="user-name">Name:</label>
+                <span id="user-name"></span>
+            </div>
+            <div>
+                <label for="user-groups">Current Groups:</label>
+                <span id="current-groups"></span>
+            </div>
+            <div>
+                <label for="role-select">Select Roles:</label>
+                <select id="role-select" multiple>
+                    <!-- Role options will be inserted here -->
+                </select>
+            </div>
+            <button onclick="updateUserGroups()">Update Groups</button>
+        </div>
+    </div>
+
+    <script>
+        let roles = []; // Store roles to populate the dropdown
+        let selectedUser = null; // Store selected user for editing
+
+        // Fetch all users and display them
+        async function getUsers() {
+            try {
+                const response = await fetch('/api/users');
+                const users = await response.json();
+
+                if (response.ok) {
+                    const userList = document.getElementById('user-list');
+                    userList.innerHTML = '';  // Clear existing table rows
+
+                    users.forEach(user => {
+                        const row = document.createElement('tr');
+
+                        row.innerHTML = `
+              <td>${user.name}</td>
+              <td>${user.identifier}</td>
+              <td>${user.verified ? 'Yes' : 'No'}</td>
+              <td>
+                <button onclick="showUserDetails('${user.name}')">Edit</button>
+              </td>
+            `;
+                        userList.appendChild(row);
+                    });
+                } else {
+                    alert('Failed to load users');
+                }
+            } catch (error) {
+                console.error('Error fetching users:', error);
+            }
+        }
+
+        // Fetch all roles and populate the dropdown
+        async function getRoles() {
+            try {
+                const response = await fetch('/api/roles');
+                roles = await response.json();
+
+                if (response.ok) {
+                    const roleSelect = document.getElementById('role-select');
+                    roleSelect.innerHTML = ''; // Clear existing options
+
+                    roles.forEach(role => {
+                        const option = document.createElement('option');
+                        option.value = role.Name;
+                        option.textContent = role.Name;
+                        roleSelect.appendChild(option);
+                    });
+                } else {
+                    alert('Failed to load roles');
+                }
+            } catch (error) {
+                console.error('Error fetching roles:', error);
+            }
+        }
+
+        // Show the details of the selected user
+        function showUserDetails(username) {
+            selectedUser = username;
+            document.querySelector('.user-details').style.display = 'block';
+            document.getElementById('user-name').textContent = username;
+
+            // Get user data and show current groups
+            fetch(`/api/users`)
+                .then(response => response.json())
+                .then(users => {
+                    const user = users.find(u => u.name === username);
+                    document.getElementById('current-groups').textContent = user.groups.join(', ');
+                });
+
+            // Pre-select the user's current groups in the dropdown
+            document.getElementById('role-select').value = [];
+        }
+
+        // Update user groups with selected roles
+        async function updateUserGroups() {
+            const selectedRoles = Array.from(document.getElementById('role-select').selectedOptions).map(option => option.value);
+
+            if (selectedRoles.length === 0) {
+                alert('Please select at least one role');
+                return;
+            }
+
+            const response = await fetch('/api/update-groups', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: selectedUser, newGroups: selectedRoles })
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                alert(result.message);
+                getUsers();  // Reload the users data after updating
+                document.querySelector('.user-details').style.display = 'none';  // Hide the details form
+            } else {
+                alert(result.message);
+            }
+        }
+
+        // Load all users and roles when the page loads
+        window.onload = async () => {
+            await getRoles(); // Fetch and populate the roles dropdown
+            await getUsers(); // Fetch and display the users
+        };
+    </script>
+</body>
+
+</html>
